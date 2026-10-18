@@ -9,6 +9,8 @@ Ce projet compare, résultat par résultat :
 - la **surprise** en % (écart entre les deux),
 - la **réaction de l'action** à la première séance qui suit l'annonce, **par rapport au marché** (variation de l'action moins celle de son indice).
 
+👉 **[Essayer l'application en ligne](https://earnings-surprise.streamlit.app)**
+
 Une bonne surprise fait-elle vraiment monter l'action ? Pas toujours : les marchés anticipent souvent, et d'autres éléments (chiffre d'affaires, prévisions de la direction) pèsent aussi.
 
 ## Exemple
@@ -62,6 +64,8 @@ Yahoo donne les heures d'annonce en heure de New York ; elles sont converties da
 Les cours sont ajustés des dividendes et divisions d'actions.
 
 ## Application web
+
+En ligne : **[earnings-surprise.streamlit.app](https://earnings-surprise.streamlit.app)**. En local :
 
 ```bash
 streamlit run app.py
@@ -123,7 +127,7 @@ L'onglet « Toutes les entreprises » lit les fichiers de `data/`, il fonctionne
 4. ✅ Application web Streamlit : on tape le nom d'une entreprise, l'analyse s'affiche
 5. ✅ Bonus : comparer les BPA GAAP et normalisés (non-GAAP), via le paramètre `methodology` ajouté à yfinance
 6. ✅ Réaction mesurée par rapport au marché (action − indice)
-7. Application en ligne sur Streamlit Community Cloud
+7. ✅ Application en ligne sur Streamlit Community Cloud
 
 ## Données
 

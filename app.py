@@ -35,6 +35,13 @@ def load_gaap(ticker: str) -> pd.DataFrame:
     return gaap.gaap_vs_normalized(ticker).reset_index()
 
 
+def saved_gaap(ticker: str) -> pd.DataFrame:
+    if not gaap.CSV_PATH.exists():
+        return pd.DataFrame()
+    saved = pd.read_csv(gaap.CSV_PATH)
+    return saved[saved["Ticker"] == ticker].drop(columns=["Ticker", "Entreprise"])
+
+
 def scatter(df: pd.DataFrame, x: str, color: str = BLUE, tooltip_extra=()) -> alt.Chart:
     base = alt.Chart(df)
     points = base.mark_circle(size=110, color=color, opacity=0.9, stroke="white", strokeWidth=1.5).encode(
@@ -117,20 +124,27 @@ def single_stock():
         g = load_gaap(ticker)
     except RuntimeError as e:
         st.info(str(e))
+        return
     except Exception as e:
-        st.info(f"Pas de données GAAP/normalisé pour {ticker} ({e}).")
-    else:
-        g["Fin de trimestre"] = g["Fin de trimestre"].dt.date
-        st.dataframe(
-            g.style.format({"BPA GAAP": "{:.2f}", "BPA normalisé": "{:.2f}",
-                            "Surprise GAAP (%)": "{:+.1f}", "Surprise normalisée (%)": "{:+.1f}",
-                            "Réaction (%)": "{:+.2f}"}, na_rep="–")
-             .map(colored, subset=["Surprise GAAP (%)", "Surprise normalisée (%)", "Réaction (%)"]),
-            hide_index=True, use_container_width=True)
-        opposite = ((g["Surprise GAAP (%)"] > 0) != (g["Surprise normalisée (%)"] > 0)).sum()
-        if opposite:
-            st.warning(f"{opposite} trimestre(s) où la surprise GAAP et la surprise normalisée "
-                       "sont de signe opposé.")
+        # Yahoo bloque parfois cet appel depuis les serveurs cloud : on se rabat
+        # sur les données enregistrées dans le dépôt pour les 54 entreprises.
+        g = saved_gaap(ticker)
+        if g.empty:
+            st.info(f"Pas de données GAAP/normalisé pour {ticker} ({e}).")
+            return
+        st.caption("Yahoo ne fournit pas ces données en direct pour le moment : "
+                   "affichage des données enregistrées lors de la dernière analyse.")
+    g["Fin de trimestre"] = pd.to_datetime(g["Fin de trimestre"]).dt.date
+    st.dataframe(
+        g.style.format({"BPA GAAP": "{:.2f}", "BPA normalisé": "{:.2f}",
+                        "Surprise GAAP (%)": "{:+.1f}", "Surprise normalisée (%)": "{:+.1f}",
+                        "Réaction (%)": "{:+.2f}"}, na_rep="–")
+         .map(colored, subset=["Surprise GAAP (%)", "Surprise normalisée (%)", "Réaction (%)"]),
+        hide_index=True, use_container_width=True)
+    opposite = ((g["Surprise GAAP (%)"] > 0) != (g["Surprise normalisée (%)"] > 0)).sum()
+    if opposite:
+        st.warning(f"{opposite} trimestre(s) où la surprise GAAP et la surprise normalisée "
+                   "sont de signe opposé.")
 
 
 def all_stocks():
