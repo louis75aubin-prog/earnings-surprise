@@ -30,10 +30,27 @@ Date
 Bonnes surprises : 8/8, dont 4 suivies d'une hausse de l'action.
 ```
 
+## Plusieurs actions
+
+`python multi.py` applique l'analyse à 13 entreprises (Apple, Amazon, Microsoft, Alphabet, Nvidia, Meta, JPMorgan, TotalEnergies, Airbus, Sanofi, BNP Paribas, ASML, SAP), soit 104 résultats trimestriels, puis `python scatter.py` trace le nuage de points :
+
+![Surprise de BPA vs réaction de l'action](scatter.png)
+
+Ce qui en ressort :
+
+- **Une mauvaise surprise est presque toujours punie** : baisse dans 74 % des cas (−2,1 % en moyenne).
+- **Une bonne surprise n'est pas récompensée pour autant** : hausse dans 49 % des cas seulement, réaction moyenne proche de zéro. Battre le consensus est déjà attendu par le marché.
+- La corrélation (de rangs) entre surprise et réaction est faible (+0,25), et varie beaucoup d'une entreprise à l'autre : forte pour Microsoft ou JPMorgan (+0,71), négative pour ASML ou SAP.
+
+LVMH, L'Oréal et Hermès ne figurent pas dans l'échantillon : Yahoo Finance n'a pas d'historique de BPA prévu/réel pour eux (ils publient surtout des résultats semestriels).
+
 ## Comment la réaction est calculée
 
 - Annonce **avant l'ouverture** : clôture du jour de l'annonce vs clôture de la veille.
-- Annonce **après la clôture** (ou heure inconnue) : clôture du lendemain vs clôture du jour de l'annonce.
+- Annonce **après la clôture** : clôture du lendemain vs clôture du jour de l'annonce.
+- **Heure incertaine** (Yahoo indique une heure en pleine séance, souvent approximative pour les valeurs européennes) : clôture du lendemain vs clôture de la veille.
+
+Yahoo donne les heures d'annonce en heure de New York ; elles sont converties dans le fuseau de la place de cotation (Paris, Amsterdam, Francfort…) avant de choisir la fenêtre.
 
 Les cours sont ajustés des dividendes et divisions d'actions.
 
@@ -45,13 +62,15 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python main.py          # Amazon par défaut
 python main.py AAPL     # ou n'importe quel ticker Yahoo Finance
+python multi.py         # 13 entreprises, enregistre data/reactions.csv
+python scatter.py       # nuage de points -> scatter.png
 ```
 
 ## Feuille de route
 
 1. ✅ Une seule action : les 8 derniers résultats
-2. Plusieurs actions (Apple, LVMH, TotalEnergies…) : une bonne surprise fait-elle monter l'action ?
-3. Graphique : nuage de points surprise vs réaction
+2. ✅ Plusieurs actions : une bonne surprise fait-elle monter l'action ?
+3. ✅ Graphique : nuage de points surprise vs réaction
 4. Application web Streamlit : on tape un ticker, l'analyse s'affiche
 5. Bonus : comparer les BPA GAAP et normalisés (non-GAAP), via le paramètre `methodology` ajouté à yfinance
 

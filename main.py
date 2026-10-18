@@ -11,6 +11,16 @@ import pandas as pd
 import yfinance as yf
 
 
+def surprise_pct(row) -> float:
+    """Surprise fournie par Yahoo, ou recalculée si elle manque."""
+    if pd.notna(row["Surprise(%)"]):
+        return row["Surprise(%)"]
+    est, actual = row["EPS Estimate"], row["Reported EPS"]
+    if pd.isna(est) or est == 0:
+        return float("nan")
+    return (actual - est) / abs(est) * 100
+
+
 def earnings_reactions(ticker: str, n: int = 8) -> pd.DataFrame:
     t = yf.Ticker(ticker)
 
@@ -22,17 +32,32 @@ def earnings_reactions(ticker: str, n: int = 8) -> pd.DataFrame:
 
     start = earnings.index.min().date() - pd.Timedelta(days=10)
     prices = t.history(start=start, auto_adjust=True)["Close"]
+    # Yahoo donne les heures d'annonce en heure de New York, même pour les
+    # actions européennes : on les ramène dans le fuseau de la place de cotation.
+    exchange_tz = prices.index.tz
+    if str(exchange_tz).startswith("America/"):
+        market_open, market_close = (9, 30), (16, 0)
+    else:
+        market_open, market_close = (9, 0), (17, 30)
     prices.index = prices.index.date
 
     rows = []
     for ts, row in earnings.iterrows():
+        ts = ts.tz_convert(exchange_tz)
         day = ts.date()
-        # Annonce avant l'ouverture (avant 9h30, heure de New York) : la réaction
-        # se lit le jour même. Sinon (après la clôture, ou heure inconnue) :
-        # elle se lit à la séance suivante.
-        before_open = (ts.hour, ts.minute) < (9, 30)
-        before = [d for d in prices.index if (d < day if before_open else d <= day)]
-        after = [d for d in prices.index if (d >= day if before_open else d > day)]
+        hm = (ts.hour, ts.minute)
+        # Avant l'ouverture : clôture du jour J vs clôture de la veille.
+        # Après la clôture : clôture du lendemain vs clôture du jour J.
+        # Pendant la séance (souvent une heure approximative chez Yahoo) :
+        # on prend large, clôture du lendemain vs clôture de la veille.
+        if hm < market_open:
+            moment = "avant ouverture"
+        elif hm >= market_close:
+            moment = "après clôture"
+        else:
+            moment = "heure incertaine"
+        before = [d for d in prices.index if (d <= day if moment == "après clôture" else d < day)]
+        after = [d for d in prices.index if (d >= day if moment == "avant ouverture" else d > day)]
         if not before or not after:
             reaction = float("nan")
         else:
@@ -40,10 +65,10 @@ def earnings_reactions(ticker: str, n: int = 8) -> pd.DataFrame:
 
         rows.append({
             "Date": day,
-            "Moment": "avant ouverture" if before_open else "après clôture",
+            "Moment": moment,
             "BPA prévu": row["EPS Estimate"],
             "BPA réel": row["Reported EPS"],
-            "Surprise (%)": row["Surprise(%)"],
+            "Surprise (%)": surprise_pct(row),
             "Réaction (%)": reaction,
         })
 
