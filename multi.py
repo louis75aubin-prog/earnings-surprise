@@ -95,11 +95,11 @@ def main():
     beats = data[data["Surprise (%)"] > 0]
     misses = data[data["Surprise (%)"] < 0]
     print(f"\nSur {len(data)} résultats :")
-    print(f"  bonnes surprises : {len(beats)}, suivies d'une hausse dans "
+    print(f"  bonnes surprises : {len(beats)}, suivies d'une surperformance du marché dans "
           f"{(beats['Réaction (%)'] > 0).mean():.0%} des cas "
           f"(réaction moyenne {beats['Réaction (%)'].mean():+.2f} %)")
     if len(misses):
-        print(f"  mauvaises surprises : {len(misses)}, suivies d'une baisse dans "
+        print(f"  mauvaises surprises : {len(misses)}, suivies d'une sous-performance dans "
               f"{(misses['Réaction (%)'] < 0).mean():.0%} des cas "
               f"(réaction moyenne {misses['Réaction (%)'].mean():+.2f} %)")
     print(f"  corrélation surprise / réaction (rangs) : {rank_corr(data):+.2f}")

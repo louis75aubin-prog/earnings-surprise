@@ -10,7 +10,7 @@ import yfinance as yf
 
 import gaap
 import multi
-from main import earnings_reactions
+from main import benchmark_for, earnings_reactions
 
 BLUE = "#2a78d6"
 ORANGE = "#eb6834"
@@ -39,7 +39,7 @@ def scatter(df: pd.DataFrame, x: str, color: str = BLUE, tooltip_extra=()) -> al
     base = alt.Chart(df)
     points = base.mark_circle(size=110, color=color, opacity=0.9, stroke="white", strokeWidth=1.5).encode(
         x=alt.X(x, title="Surprise sur le BPA (%)"),
-        y=alt.Y("Réaction (%):Q", title="Réaction de l'action (%)"),
+        y=alt.Y("Réaction (%):Q", title="Réaction vs marché (%)"),
         tooltip=[*tooltip_extra,
                  alt.Tooltip(x, format="+.1f"),
                  alt.Tooltip("Réaction (%):Q", format="+.2f")],
@@ -59,10 +59,15 @@ st.title("Earnings Surprise")
 st.markdown("**Quand une entreprise annonce des bénéfices meilleurs (ou pires) que prévu, "
             "comment réagit son action en bourse ?**")
 
+
 def single_stock():
     col_q, col_pick, col_n = st.columns([2, 3, 1])
     query = col_q.text_input("Nom de l'entreprise ou ticker", value="Amazon")
-    matches = search(query) if query.strip() else []
+    try:
+        matches = search(query) if query.strip() else []
+    except Exception as e:
+        st.error(f"Yahoo Finance ne répond pas pour l'instant ({e}). Réessayer dans quelques minutes.")
+        return
     if not matches:
         st.warning("Aucune action trouvée pour cette recherche.")
         return
@@ -85,7 +90,7 @@ def single_stock():
     misses = df[df["Surprise (%)"] < 0]
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Bonnes surprises", f"{len(beats)} / {len(df)}")
-    m2.metric("… suivies d'une hausse",
+    m2.metric("… l'action bat son indice",
               f"{(beats['Réaction (%)'] > 0).sum()} / {len(beats)}" if len(beats) else "–")
     m3.metric("Réaction moy. si bonne", f"{beats['Réaction (%)'].mean():+.2f} %" if len(beats) else "–")
     m4.metric("Réaction moy. si mauvaise", f"{misses['Réaction (%)'].mean():+.2f} %" if len(misses) else "–")
@@ -93,13 +98,16 @@ def single_stock():
     left, right = st.columns([3, 2])
     left.dataframe(
         df.style.format({"BPA prévu": "{:.2f}", "BPA réel": "{:.2f}",
-                         "Surprise (%)": "{:+.1f}", "Réaction (%)": "{:+.2f}"})
+                         "Surprise (%)": "{:+.1f}", "Action (%)": "{:+.2f}",
+                         "Marché (%)": "{:+.2f}", "Réaction (%)": "{:+.2f}"}, na_rep="–")
           .map(colored, subset=["Surprise (%)", "Réaction (%)"]),
         hide_index=True, use_container_width=True)
     right.altair_chart(scatter(df, "Surprise (%):Q", tooltip_extra=["Date:T"]),
                        use_container_width=True)
-    st.caption("Réaction : clôture de la première séance après l'annonce vs clôture précédente "
-               "(fenêtre de deux séances si l'heure d'annonce est incertaine). Cours ajustés.")
+    st.caption(f"Action : variation entre la clôture qui précède l'annonce et celle de la première "
+               f"séance qui suit (fenêtre de deux séances si l'heure d'annonce est incertaine). "
+               f"Marché : variation de l'indice de référence ({benchmark_for(ticker) or 'aucun'}) "
+               f"sur la même fenêtre. Réaction = Action − Marché.")
 
     st.subheader("Bonus : BPA GAAP vs normalisé")
     st.markdown("Le BPA **GAAP** est le chiffre comptable, éléments exceptionnels compris "
@@ -134,8 +142,8 @@ def all_stocks():
     misses = data[data["Surprise (%)"] < 0]
     c1, c2, c3 = st.columns(3)
     c1.metric("Résultats analysés", f"{len(data)} ({data['Ticker'].nunique()} entreprises)")
-    c2.metric("Bonne surprise → hausse", f"{(beats['Réaction (%)'] > 0).mean():.0%}")
-    c3.metric("Mauvaise surprise → baisse", f"{(misses['Réaction (%)'] < 0).mean():.0%}")
+    c2.metric("Bonne surprise → bat le marché", f"{(beats['Réaction (%)'] > 0).mean():.0%}")
+    c3.metric("Mauvaise surprise → fait pire", f"{(misses['Réaction (%)'] < 0).mean():.0%}")
 
     clipped = data[data["Surprise (%)"].between(-25, 50)]
     st.altair_chart(scatter(clipped, "Surprise (%):Q", tooltip_extra=["Entreprise:N", "Date:T"]),

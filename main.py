@@ -3,6 +3,11 @@
 Pour un ticker donné, affiche les N derniers résultats trimestriels :
 bénéfice par action (BPA) prévu, BPA réel, surprise en %, et réaction
 de l'action à la première séance qui suit l'annonce.
+
+La réaction est mesurée par rapport au marché : variation de l'action moins
+variation de son indice de référence sur la même fenêtre (rendement anormal).
+Si le Nasdaq prend +2 % le jour où Amazon prend +9 %, la réaction aux
+résultats est de +7 %.
 """
 
 import sys
@@ -19,6 +24,29 @@ MARKET_HOURS = {
     "Europe/Zurich": ((9, 0), (17, 30)),
     "default": ((9, 0), (17, 30)),  # Paris, Amsterdam, Francfort…
 }
+
+
+# Indice de référence selon la place de cotation (suffixe du ticker Yahoo)
+BENCHMARKS = {
+    "": "^GSPC",  # S&P 500 pour les actions américaines (pas de suffixe)
+    "PA": "^FCHI", "AS": "^AEX", "DE": "^GDAXI", "L": "^FTSE", "CO": "^OMXC25",
+    "SW": "^SSMI", "MI": "FTSEMIB.MI", "MC": "^IBEX", "TO": "^GSPTSE",
+    "T": "^N225", "HK": "^HSI",
+}
+
+
+def benchmark_for(ticker: str) -> str | None:
+    suffix = ticker.rsplit(".", 1)[1] if "." in ticker else ""
+    return BENCHMARKS.get(suffix)
+
+
+def window_return(prices: pd.Series, start, end) -> float:
+    """Variation (%) entre la clôture du `start` (ou la précédente) et celle du `end` (ou la suivante)."""
+    before = prices[prices.index <= start]
+    after = prices[prices.index >= end]
+    if before.empty or after.empty:
+        return float("nan")
+    return (after.iloc[0] / before.iloc[-1] - 1) * 100
 
 
 def surprise_pct(row) -> float:
@@ -50,6 +78,12 @@ def earnings_reactions(ticker: str, n: int = 8) -> pd.DataFrame:
     market_open, market_close = MARKET_HOURS.get(str(exchange_tz), MARKET_HOURS["default"])
     prices.index = prices.index.date
 
+    index_ticker = benchmark_for(ticker)
+    index_prices = None
+    if index_ticker:
+        index_prices = yf.Ticker(index_ticker).history(start=start, auto_adjust=True)["Close"]
+        index_prices.index = index_prices.index.date
+
     rows = []
     for ts, row in earnings.iterrows():
         ts = ts.tz_convert(exchange_tz)
@@ -68,9 +102,13 @@ def earnings_reactions(ticker: str, n: int = 8) -> pd.DataFrame:
         before = [d for d in prices.index if (d <= day if moment == "après clôture" else d < day)]
         after = [d for d in prices.index if (d >= day if moment == "avant ouverture" else d > day)]
         if not before or not after:
-            reaction = float("nan")
+            stock_move = market_move = float("nan")
         else:
-            reaction = (prices[after[0]] / prices[before[-1]] - 1) * 100
+            stock_move = window_return(prices, before[-1], after[0])
+            market_move = (window_return(index_prices, before[-1], after[0])
+                           if index_prices is not None else float("nan"))
+        # Sans indice connu pour cette place, on garde la variation brute
+        reaction = stock_move - market_move if pd.notna(market_move) else stock_move
 
         rows.append({
             "Date": day,
@@ -78,6 +116,8 @@ def earnings_reactions(ticker: str, n: int = 8) -> pd.DataFrame:
             "BPA prévu": row["EPS Estimate"],
             "BPA réel": row["Reported EPS"],
             "Surprise (%)": surprise_pct(row),
+            "Action (%)": stock_move,
+            "Marché (%)": market_move,
             "Réaction (%)": reaction,
         })
 
@@ -88,15 +128,16 @@ def main():
     ticker = sys.argv[1] if len(sys.argv) > 1 else "AMZN"
     df = earnings_reactions(ticker)
 
-    print(f"\n{ticker} — {len(df)} derniers résultats\n")
-    with pd.option_context("display.float_format", "{:,.2f}".format, "display.width", 120):
+    print(f"\n{ticker} — {len(df)} derniers résultats "
+          f"(réaction = action − {benchmark_for(ticker) or 'aucun indice'})\n")
+    with pd.option_context("display.float_format", "{:,.2f}".format, "display.width", 160, "display.max_columns", None):
         print(df)
 
     beats = df[df["Surprise (%)"] > 0]
     if len(beats):
         up = (beats["Réaction (%)"] > 0).sum()
         print(f"\nBonnes surprises : {len(beats)}/{len(df)}, "
-              f"dont {up} suivies d'une hausse de l'action.")
+              f"dont {up} suivies d'une hausse de l'action par rapport au marché.")
 
 
 if __name__ == "__main__":

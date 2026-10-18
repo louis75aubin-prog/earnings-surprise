@@ -74,28 +74,28 @@ def plot(data: pd.DataFrame, path: Path = OUT_PATH):
                     ha="center", fontsize=8.5, color=TEXT, fontweight="bold", zorder=5)
 
     if outside.any():
-        ax.text(1, -0.1, f"◆ {outside.sum()} surprises hors échelle, posées sur le bord",
-                transform=ax.transAxes, ha="right", fontsize=8, color=TEXT_MUTED)
+        ax.scatter([], [], s=45, color=TEXT_MUTED, marker="D",
+                   label=f"Surprise hors échelle, posée sur le bord ({outside.sum()})")
 
     beats = data[data["Surprise (%)"] > 0]
     misses = data[data["Surprise (%)"] < 0]
     ax.set_title("Battre les prévisions ne suffit pas à faire monter l'action",
                  loc="left", fontsize=14, color=TEXT, pad=28, fontweight="bold")
     ax.text(0, 1.02,
-            f"{len(data)} résultats trimestriels, {data['Ticker'].nunique()} entreprises. "
-            f"Bonne surprise → hausse dans {(beats['Réaction (%)'] > 0).mean():.0%} des cas ; "
-            f"mauvaise surprise → baisse dans {(misses['Réaction (%)'] < 0).mean():.0%} des cas.",
+            f"{len(data)} résultats, {data['Ticker'].nunique()} entreprises. Bonne surprise : l'action bat "
+            f"son indice {(beats['Réaction (%)'] > 0).mean():.0%} du temps. Mauvaise : elle fait pire "
+            f"{(misses['Réaction (%)'] < 0).mean():.0%} du temps.",
             transform=ax.transAxes, fontsize=9.5, color=TEXT_MUTED)
 
     ax.set_xlim(X_MIN - 3, X_MAX + 3)
     ax.set_xlabel("Surprise sur le BPA (%) — réel vs prévu par les analystes", color=TEXT_MUTED)
-    ax.set_ylabel("Réaction de l'action (%) — première séance après l'annonce", color=TEXT_MUTED)
+    ax.set_ylabel("Réaction vs marché (%) — action moins son indice", color=TEXT_MUTED)
     ax.tick_params(colors=TEXT_MUTED, length=0)
     for side in ax.spines.values():
         side.set_visible(False)
-    ax.legend(loc="lower right", frameon=False, labelcolor=TEXT, fontsize=9)
+    ax.legend(loc="lower right", frameon=True, facecolor=SURFACE, edgecolor=GRID, framealpha=0.95, labelcolor=TEXT, fontsize=9)
 
-    fig.text(0.01, 0.01, "Source : Yahoo Finance via yfinance. Cours ajustés.",
+    fig.text(0.01, 0.01, "Source : Yahoo Finance (yfinance). Réaction = variation de l’action − variation de son indice (S&P 500, CAC 40, DAX…).",
              fontsize=8, color=TEXT_MUTED)
     fig.tight_layout()
     fig.savefig(path, dpi=150, facecolor=SURFACE)
