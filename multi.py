@@ -1,8 +1,13 @@
 """Earnings Surprise — étape 2 : plusieurs actions.
 
-Applique l'analyse de main.py à une dizaine d'entreprises et répond à la
-question : une bonne surprise fait-elle vraiment monter l'action ?
+Applique l'analyse de main.py à une cinquantaine de grandes entreprises
+américaines et européennes et répond à la question : une bonne surprise
+fait-elle vraiment monter l'action ?
 Les résultats détaillés sont enregistrés dans data/reactions.csv.
+
+L'échantillon regroupe les grandes capitalisations pour lesquelles Yahoo
+Finance publie un historique trimestriel de BPA prévu/réel. Beaucoup de
+valeurs du CAC 40 (LVMH, L'Oréal, Hermès, Safran, Schneider…) n'en ont pas.
 """
 
 import sys
@@ -12,21 +17,27 @@ import pandas as pd
 
 from main import earnings_reactions
 
-TICKERS = {
-    "AAPL": "Apple",
-    "AMZN": "Amazon",
-    "MSFT": "Microsoft",
-    "GOOGL": "Alphabet",
-    "NVDA": "Nvidia",
-    "META": "Meta",
-    "JPM": "JPMorgan",
-    "TTE.PA": "TotalEnergies",
-    "AIR.PA": "Airbus",
-    "SAN.PA": "Sanofi",
-    "BNP.PA": "BNP Paribas",
-    "ASML.AS": "ASML",
-    "SAP.DE": "SAP",
+US = {
+    "AAPL": "Apple", "MSFT": "Microsoft", "GOOGL": "Alphabet", "AMZN": "Amazon",
+    "NVDA": "Nvidia", "META": "Meta", "TSLA": "Tesla", "AVGO": "Broadcom",
+    "ORCL": "Oracle", "ADBE": "Adobe", "CRM": "Salesforce", "AMD": "AMD",
+    "INTC": "Intel", "NFLX": "Netflix", "JPM": "JPMorgan", "BAC": "Bank of America",
+    "V": "Visa", "MA": "Mastercard", "UNH": "UnitedHealth", "JNJ": "Johnson & Johnson",
+    "LLY": "Eli Lilly", "PFE": "Pfizer", "MRK": "Merck", "ABBV": "AbbVie",
+    "PG": "Procter & Gamble", "KO": "Coca-Cola", "PEP": "PepsiCo", "WMT": "Walmart",
+    "COST": "Costco", "HD": "Home Depot", "MCD": "McDonald's", "NKE": "Nike",
+    "DIS": "Disney", "XOM": "ExxonMobil", "CVX": "Chevron",
 }
+EUROPE = {
+    "TTE.PA": "TotalEnergies", "AIR.PA": "Airbus", "SAN.PA": "Sanofi",
+    "BNP.PA": "BNP Paribas", "GLE.PA": "Société Générale", "ACA.PA": "Crédit Agricole",
+    "DSY.PA": "Dassault Systèmes", "LR.PA": "Legrand", "EN.PA": "Bouygues",
+    "STMPA.PA": "STMicroelectronics", "MT.AS": "ArcelorMittal", "ASML.AS": "ASML",
+    "SAP.DE": "SAP", "SIE.DE": "Siemens", "ALV.DE": "Allianz",
+    "NOVO-B.CO": "Novo Nordisk", "AZN.L": "AstraZeneca", "SHEL.L": "Shell",
+    "HSBA.L": "HSBC",
+}
+TICKERS = {**US, **EUROPE}
 
 CSV_PATH = Path(__file__).parent / "data" / "reactions.csv"
 

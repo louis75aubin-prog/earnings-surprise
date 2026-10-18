@@ -1,5 +1,6 @@
-# Fork avec le paramètre `methodology` (GAAP / normalisé), utilisé par gaap.py
-yfinance @ git+https://github.com/louis75aubin-prog/yfinance.git@feature/eps-methodology
+# Branche dev : contient le paramètre `methodology` (GAAP / normalisé) utilisé par gaap.py,
+# en attendant la prochaine version PyPI de yfinance
+yfinance @ git+https://github.com/ranaroussi/yfinance.git@dev
 pandas
 matplotlib
 streamlit

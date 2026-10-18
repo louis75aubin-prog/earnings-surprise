@@ -15,7 +15,7 @@ import multi
 
 OUT_PATH = Path(__file__).parent / "scatter.png"
 X_MAX = 50  # au-delà, la surprise est écrasée par un BPA prévu proche de 0
-X_MIN = -25
+X_MIN = -30
 
 SURFACE = "#fcfcfb"
 TEXT = "#0b0b0b"
@@ -48,28 +48,34 @@ def plot(data: pd.DataFrame, path: Path = OUT_PATH):
     ax.axvline(0, color=TEXT_MUTED, lw=1, zorder=1)
     ax.grid(color=GRID, lw=0.8, zorder=0)
 
-    for zone, style in GROUPS.items():
-        g = data[data["Zone"] == zone]
-        inside = g[g["Surprise (%)"] <= X_MAX]
-        ax.scatter(inside["Surprise (%)"], inside["Réaction (%)"], s=55,
-                   color=style["color"], marker=style["marker"],
-                   edgecolor=SURFACE, linewidth=1.5, alpha=0.9, zorder=3,
-                   label=f"{zone} ({len(g)} résultats)")
-        # Surprises hors échelle : posées sur le bord droit, avec leur vraie valeur
-        for _, r in g[g["Surprise (%)"] > X_MAX].iterrows():
-            ax.scatter(X_MAX, r["Réaction (%)"], s=70, color=style["color"],
-                       marker=">", edgecolor=SURFACE, linewidth=1.5, zorder=3)
-            ax.annotate(f"{r['Entreprise']} +{r['Surprise (%)']:.0f} %",
-                        (X_MAX, r["Réaction (%)"]), xytext=(-8, 0),
-                        textcoords="offset points", ha="right", va="center",
-                        fontsize=8, color=TEXT_MUTED)
+    # Surprises hors échelle (BPA prévu proche de 0) : posées sur le bord du graphique
+    x = data["Surprise (%)"].clip(X_MIN, X_MAX)
+    outside = (data["Surprise (%)"] < X_MIN) | (data["Surprise (%)"] > X_MAX)
 
-    # Tendance (moindres carrés, sur les points à l'échelle)
-    core = data[data["Surprise (%)"] <= X_MAX]
-    slope, intercept = np.polyfit(core["Surprise (%)"], core["Réaction (%)"], 1)
-    xs = [X_MIN, X_MAX]
-    ax.plot(xs, [slope * x + intercept for x in xs], color=TEXT_MUTED,
-            lw=2, ls="--", zorder=2, label="Tendance")
+    for zone, style in GROUPS.items():
+        g = data["Zone"] == zone
+        ax.scatter(x[g & ~outside], data.loc[g & ~outside, "Réaction (%)"], s=45,
+                   color=style["color"], marker=style["marker"],
+                   edgecolor=SURFACE, linewidth=1.2, alpha=0.8, zorder=3,
+                   label=f"{zone} ({g.sum()} résultats)")
+        ax.scatter(x[g & outside], data.loc[g & outside, "Réaction (%)"], s=45,
+                   color=style["color"], marker="D", edgecolor=SURFACE,
+                   linewidth=1.2, alpha=0.8, zorder=3)
+
+    # Réaction moyenne par tranche de surprise
+    bins = [-np.inf, -10, -5, 0, 5, 10, 20, np.inf]
+    centers = [-15, -7.5, -2.5, 2.5, 7.5, 15, 30]
+    means = data.groupby(pd.cut(data["Surprise (%)"], bins), observed=False)["Réaction (%)"].mean()
+    ax.plot(centers, means.values, color=TEXT, lw=2, marker="o", ms=7,
+            markerfacecolor=SURFACE, markeredgewidth=2, zorder=4,
+            label="Réaction moyenne par tranche de surprise")
+    for cx, m in zip(centers, means.values):
+        ax.annotate(f"{m:+.1f} %", (cx, m), xytext=(0, 10), textcoords="offset points",
+                    ha="center", fontsize=8.5, color=TEXT, fontweight="bold", zorder=5)
+
+    if outside.any():
+        ax.text(1, -0.1, f"◆ {outside.sum()} surprises hors échelle, posées sur le bord",
+                transform=ax.transAxes, ha="right", fontsize=8, color=TEXT_MUTED)
 
     beats = data[data["Surprise (%)"] > 0]
     misses = data[data["Surprise (%)"] < 0]
@@ -81,7 +87,7 @@ def plot(data: pd.DataFrame, path: Path = OUT_PATH):
             f"mauvaise surprise → baisse dans {(misses['Réaction (%)'] < 0).mean():.0%} des cas.",
             transform=ax.transAxes, fontsize=9.5, color=TEXT_MUTED)
 
-    ax.set_xlim(X_MIN, X_MAX + 3)
+    ax.set_xlim(X_MIN - 3, X_MAX + 3)
     ax.set_xlabel("Surprise sur le BPA (%) — réel vs prévu par les analystes", color=TEXT_MUTED)
     ax.set_ylabel("Réaction de l'action (%) — première séance après l'annonce", color=TEXT_MUTED)
     ax.tick_params(colors=TEXT_MUTED, length=0)

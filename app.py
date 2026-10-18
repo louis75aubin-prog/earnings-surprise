@@ -152,7 +152,7 @@ def all_stocks():
                      use_container_width=True)
 
 
-tab_one, tab_all = st.tabs(["Une action", "13 entreprises"])
+tab_one, tab_all = st.tabs(["Une action", "Toutes les entreprises"])
 with tab_one:
     single_stock()
 with tab_all:

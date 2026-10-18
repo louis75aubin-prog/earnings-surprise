@@ -5,7 +5,7 @@ participations, dépréciations, coûts de restructuration… Le BPA normalisé
 (non-GAAP) les retire. Laquelle des deux surprises la bourse regarde-t-elle ?
 
 Nécessite le paramètre `methodology` de Ticker.get_earnings_history(),
-ajouté à yfinance sur la branche feature/eps-methodology.
+ajouté à yfinance (ranaroussi/yfinance#2999, branche dev).
 """
 
 import sys
@@ -26,7 +26,7 @@ def eps_history(ticker: str, methodology: str) -> pd.DataFrame:
     except TypeError as e:
         raise RuntimeError(
             "Cette version de yfinance ne gère pas `methodology`. Installer : "
-            "pip install git+https://github.com/louis75aubin-prog/yfinance.git@feature/eps-methodology"
+            "pip install git+https://github.com/ranaroussi/yfinance.git@dev"
         ) from e
 
 

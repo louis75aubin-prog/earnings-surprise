@@ -11,6 +11,16 @@ import pandas as pd
 import yfinance as yf
 
 
+# Heures d'ouverture et de clôture, en heure locale de la place de cotation
+MARKET_HOURS = {
+    "America/New_York": ((9, 30), (16, 0)),
+    "Europe/London": ((8, 0), (16, 30)),
+    "Europe/Copenhagen": ((9, 0), (17, 0)),
+    "Europe/Zurich": ((9, 0), (17, 30)),
+    "default": ((9, 0), (17, 30)),  # Paris, Amsterdam, Francfort…
+}
+
+
 def surprise_pct(row) -> float:
     """Surprise fournie par Yahoo, ou recalculée si elle manque."""
     if pd.notna(row["Surprise(%)"]):
@@ -37,10 +47,7 @@ def earnings_reactions(ticker: str, n: int = 8) -> pd.DataFrame:
     # Yahoo donne les heures d'annonce en heure de New York, même pour les
     # actions européennes : on les ramène dans le fuseau de la place de cotation.
     exchange_tz = prices.index.tz
-    if str(exchange_tz).startswith("America/"):
-        market_open, market_close = (9, 30), (16, 0)
-    else:
-        market_open, market_close = (9, 0), (17, 30)
+    market_open, market_close = MARKET_HOURS.get(str(exchange_tz), MARKET_HOURS["default"])
     prices.index = prices.index.date
 
     rows = []
