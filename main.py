@@ -29,6 +29,8 @@ def earnings_reactions(ticker: str, n: int = 8) -> pd.DataFrame:
         raise ValueError(f"Aucune date de résultats trouvée pour {ticker}")
     # On ne garde que les résultats déjà publiés
     earnings = earnings.dropna(subset=["Reported EPS"]).sort_index().tail(n)
+    if earnings.empty:
+        raise ValueError(f"Yahoo Finance n'a pas d'historique de BPA publié pour {ticker}")
 
     start = earnings.index.min().date() - pd.Timedelta(days=10)
     prices = t.history(start=start, auto_adjust=True)["Close"]

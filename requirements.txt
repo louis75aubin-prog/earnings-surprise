@@ -1,3 +1,6 @@
-yfinance>=1.0
+# Fork avec le paramètre `methodology` (GAAP / normalisé), utilisé par gaap.py
+yfinance @ git+https://github.com/louis75aubin-prog/yfinance.git@feature/eps-methodology
 pandas
 matplotlib
+streamlit
+altair

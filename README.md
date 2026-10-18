@@ -54,6 +54,36 @@ Yahoo donne les heures d'annonce en heure de New York ; elles sont converties da
 
 Les cours sont ajustés des dividendes et divisions d'actions.
 
+## Application web
+
+```bash
+streamlit run app.py
+```
+
+On tape le nom d'une entreprise (« Amazon », « Airbus », « TotalEnergies »…) ou un ticker, on choisit la cotation, et l'analyse s'affiche : tableau des derniers résultats, nuage de points, comparaison GAAP / normalisé. Un second onglet reprend l'analyse des 13 entreprises.
+
+## Bonus : BPA GAAP ou normalisé ?
+
+Le BPA **GAAP** est le chiffre comptable, éléments exceptionnels compris (plus-values sur participations, dépréciations, restructurations). Le BPA **normalisé** (non-GAAP) les retire. Les deux surprises peuvent raconter des histoires opposées :
+
+| Trimestre | Surprise GAAP | Surprise normalisée | Réaction |
+|---|---|---|---|
+| Amazon, T2 2026 | +214,9 % | +7,3 % | +15,3 % |
+| Amazon, T1 2026 | +68,2 % | −2,2 % | +0,8 % |
+| Alphabet, T2 2026 | +214,2 % | −2,2 % | −7,1 % |
+| Sanofi, T4 2025 | −173,2 % | +4,4 % | −0,6 % |
+
+`python gaap.py` compare les deux sur les 4 derniers trimestres des 13 entreprises (52 résultats) : les deux surprises diffèrent de plus de 10 points dans 23 cas, et sont de signe opposé dans 15 cas. Mais aucune des deux n'explique nettement mieux la réaction de la bourse :
+
+| | Corrélation (rangs) avec la réaction | Même sens que la bourse |
+|---|---|---|
+| GAAP | +0,24 | 52 % |
+| Normalisé | +0,14 | 50 % |
+
+Sur si peu de résultats, l'écart n'est pas significatif. Le marché réagit surtout à ce que la surprise de BPA ne mesure pas : chiffre d'affaires, marges, prévisions de la direction.
+
+Cette comparaison utilise le paramètre `methodology` de `Ticker.get_earnings_history()`, que j'ai ajouté à yfinance (branche [`feature/eps-methodology`](https://github.com/louis75aubin-prog/yfinance/tree/feature/eps-methodology)). `python gaap.py AMZN` affiche le détail pour une entreprise.
+
 ## Installation
 
 ```bash
@@ -64,15 +94,19 @@ python main.py          # Amazon par défaut
 python main.py AAPL     # ou n'importe quel ticker Yahoo Finance
 python multi.py         # 13 entreprises, enregistre data/reactions.csv
 python scatter.py       # nuage de points -> scatter.png
+python gaap.py          # bonus GAAP vs normalisé
+streamlit run app.py    # application web
 ```
+
+`requirements.txt` installe yfinance depuis la branche `feature/eps-methodology`, nécessaire pour le bonus. Le reste fonctionne avec la version standard de yfinance.
 
 ## Feuille de route
 
 1. ✅ Une seule action : les 8 derniers résultats
 2. ✅ Plusieurs actions : une bonne surprise fait-elle monter l'action ?
 3. ✅ Graphique : nuage de points surprise vs réaction
-4. Application web Streamlit : on tape un ticker, l'analyse s'affiche
-5. Bonus : comparer les BPA GAAP et normalisés (non-GAAP), via le paramètre `methodology` ajouté à yfinance
+4. ✅ Application web Streamlit : on tape le nom d'une entreprise, l'analyse s'affiche
+5. ✅ Bonus : comparer les BPA GAAP et normalisés (non-GAAP), via le paramètre `methodology` ajouté à yfinance
 
 ## Données
 
